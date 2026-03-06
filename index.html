@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>FinanceChat — AI Money Analyst</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 <style>
 :root {
   --bg:#0d0f1a; --sb:#12152a; --card:#1a1f38; --border:#252b4a;
@@ -290,6 +292,26 @@ function onFileSelect() {
 // ═══ Upload ═══════════════════════════════════════════════════════════════
 document.getElementById('upload-btn').addEventListener('click', doUpload);
 
+function detectPDFPassword(filename) {
+  const m = filename.match(/\((\d+)\)/);
+  return m ? m[1] : null;
+}
+
+async function extractTextFromPDF(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const password = detectPDFPassword(file.name);
+  const loadOpts = { data: arrayBuffer };
+  if (password) loadOpts.password = password;
+  const pdf = await pdfjsLib.getDocument(loadOpts).promise;
+  let text = '';
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    text += content.items.map(i => i.str).join(' ') + '\n';
+  }
+  return text;
+}
+
 async function doUpload() {
   const apiKey = document.getElementById('api-key').value.trim();
   if (!apiKey) { toast('Enter your Anthropic API key first', 'err'); return; }
@@ -301,15 +323,27 @@ async function doUpload() {
   const status = document.getElementById('upload-status');
   btn.disabled = true;
   bar.classList.add('show');
-  status.textContent = `Uploading ${files.length} file(s)…`;
-
-  const form = new FormData();
-  form.append('api_key', apiKey);
-  for (const f of files) form.append('pdfs', f);
 
   try {
+    // Extract text client-side — avoids Vercel's 4.5MB body limit
+    const extractedFiles = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      status.textContent = `Reading ${f.name} (${i+1}/${files.length})…`;
+      try {
+        const text = await extractTextFromPDF(f);
+        extractedFiles.push({ filename: f.name, text });
+      } catch(e) {
+        extractedFiles.push({ filename: f.name, error: `PDF read failed: ${e.message}` });
+      }
+    }
+
     status.textContent = 'Parsing with Claude Haiku…';
-    const res = await fetch('/api/upload', {method:'POST', body:form});
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey, files: extractedFiles })
+    });
     const data = await res.json();
     bar.classList.remove('show');
 
@@ -342,16 +376,9 @@ function welcomeSummary(accounts) {
   const credits = accounts.reduce((s,a)=>s+(a.total_credits||0), 0);
   const debits  = accounts.reduce((s,a)=>s+(a.total_debits||0), 0);
   const period  = accounts[0]?.period || '';
-  return `✅ **${accounts.length} account(s) loaded** — ${period}
-
-` +
-    `**Snapshot:**
-- 💰 Total closing balance: **${fmt(closing)}**
-` +
-    `- 📥 Total in: **${fmt(credits)}**
-- 📤 Total out: **${fmt(debits)}**
-
-` +
+  return `✅ **${accounts.length} account(s) loaded** — ${period}\n\n` +
+    `**Snapshot:**\n- 💰 Total closing balance: **${fmt(closing)}**\n` +
+    `- 📥 Total in: **${fmt(credits)}**\n- 📤 Total out: **${fmt(debits)}**\n\n` +
     `Ask me anything, or try **"Full overview with charts"** to see the complete picture!`;
 }
 
@@ -420,7 +447,7 @@ document.getElementById('msg-input').addEventListener('input', function(){
 document.getElementById('send-btn').addEventListener('click', send);
 
 function prefill(el) {
-  document.getElementById('msg-input').value = el.textContent.replace(/^[^w₹]*/,'').trim();
+  document.getElementById('msg-input').value = el.textContent.replace(/^[^\w₹]*/,'').trim();
 }
 function sendChip(text) {
   document.getElementById('msg-input').value = text;
@@ -471,8 +498,7 @@ async function send() {
       const {done, value} = await reader.read();
       if (done) break;
       buf += dec.decode(value, {stream:true});
-      const lines = buf.split('
-');
+      const lines = buf.split('\n');
       buf = lines.pop();
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
@@ -512,8 +538,7 @@ function addUserMsg(text) {
   const msgs = document.getElementById('messages');
   const d = document.createElement('div');
   d.className = 'msg user';
-  d.innerHTML = `<div class="av">👤</div><div class="bubble">${esc(text).replace(/
-/g,'<br>')}</div>`;
+  d.innerHTML = `<div class="av">👤</div><div class="bubble">${esc(text).replace(/\n/g,'<br>')}</div>`;
   msgs.appendChild(d);
   scrollBot();
 }
