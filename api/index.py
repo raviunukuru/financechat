@@ -1,12 +1,11 @@
 """
 FinanceChat â Stateless Flask backend for Vercel + local dev.
 All state lives client-side. Every request carries its own context.
+PDFs are parsed client-side (PDF.js) â only text is sent here.
 """
 import os
 import re
 import json
-import tempfile
-import pdfplumber
 from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
 from flask_cors import CORS
 import anthropic
@@ -16,29 +15,6 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 app = Flask(__name__)
 CORS(app)
-
-UPLOAD_FOLDER = tempfile.mkdtemp()
-
-# ââ Helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-
-def detect_password(filename: str):
-    """Extract password from filename like 'HDFC Statement (129224807).pdf'"""
-    m = re.search(r'\((\d+)\)', filename)
-    return m.group(1) if m else None
-
-
-def extract_pdf_text(path: str, password) -> str:
-    kwargs = {"password": password} if password else {}
-    pages = []
-    try:
-        with pdfplumber.open(path, **kwargs) as pdf:
-            for page in pdf.pages:
-                text = page.extract_text()
-                if text:
-                    pages.append(text)
-        return "\n".join(pages)
-    except Exception as e:
-        return f"ERROR: {e}"
 
 
 def parse_with_claude(raw_text: str, api_key: str, filename: str) -> dict:
@@ -140,7 +116,7 @@ RULES:
     return "\n".join(lines)
 
 
-# ââ Routes âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ââ Routes ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 @app.route('/')
 def index():
@@ -149,25 +125,27 @@ def index():
 
 @app.route('/api/upload', methods=['POST'])
 def upload():
-    api_key = request.form.get('api_key', '').strip()
+    """Receive pre-extracted text from PDF.js on the client, parse with Claude."""
+    data = request.get_json(force=True)
+    api_key = data.get('api_key', '').strip()
     if not api_key:
         return jsonify({'error': 'API key required'}), 400
 
-    files = request.files.getlist('pdfs')
+    files = data.get('files', [])
     if not files:
         return jsonify({'error': 'No files provided'}), 400
 
     results = []
     for f in files:
-        filename = f.filename or 'statement.pdf'
-        save_path = os.path.join(UPLOAD_FOLDER, filename)
-        f.save(save_path)
+        filename = f.get('filename', 'statement.pdf')
+        error = f.get('error', '')
+        if error:
+            results.append({'filename': filename, 'error': error})
+            continue
 
-        password = detect_password(filename)
-        raw_text = extract_pdf_text(save_path, password)
-
-        if raw_text.startswith('ERROR'):
-            results.append({'filename': filename, 'error': raw_text})
+        raw_text = f.get('text', '').strip()
+        if not raw_text:
+            results.append({'filename': filename, 'error': 'No text extracted from PDF'})
             continue
 
         try:
