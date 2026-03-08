@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>FinanceChat â AI Money Analyst</title>
+<title>FinanceChat — AI Money Analyst</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
@@ -18,7 +18,7 @@
 html,body{height:100%;overflow:hidden}
 body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex}
 
-/* âââ SIDEBAR âââââââââââââââââââââââââââââââââââââââââââââââââââ */
+/* ─── SIDEBAR ─────────────────────────────────────────────────── */
 #sidebar{
   width:300px;min-width:260px;background:var(--sb);
   border-right:1px solid var(--border);
@@ -87,7 +87,7 @@ body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--bg);co
 }
 #reset-btn:hover{background:#ef444415}
 
-/* âââ MAIN âââââââââââââââââââââââââââââââââââââââââââââââââââââââ */
+/* ─── MAIN ─────────────────────────────────────────────────────── */
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 
 #chat-header{
@@ -164,28 +164,28 @@ body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--bg);co
 </head>
 <body>
 
-<!-- âââ SIDEBAR âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+<!-- ═══ SIDEBAR ═══════════════════════════════════════════════════════════ -->
 <aside id="sidebar">
-  <div class="logo"><span>ð¹</span> FinanceChat</div>
+  <div class="logo"><span>💹</span> FinanceChat</div>
 
   <div>
     <div class="sect-label">Anthropic API Key</div>
     <div class="api-row">
-      <input type="password" id="api-key" placeholder="sk-ant-api03-â¦" autocomplete="off"/>
+      <input type="password" id="api-key" placeholder="sk-ant-api03-…" autocomplete="off"/>
     </div>
   </div>
 
   <div>
     <div class="sect-label">Upload Bank Statements</div>
     <div id="drop-zone" onclick="document.getElementById('file-input').click()">
-      <div class="dz-icon">ð</div>
+      <div class="dz-icon">📂</div>
       <p>Drop PDFs here or <strong>click to browse</strong></p>
       <p style="margin-top:3px;font-size:.72rem">Passwords auto-read from filename (e.g. HDFC (123456).pdf)</p>
       <input type="file" id="file-input" multiple accept=".pdf"/>
     </div>
     <div id="selected-files"></div>
-    <button id="upload-btn" disabled style="margin-top:8px">â¬ Upload &amp; Analyse</button>
-    <div id="uploading-bar"><div class="spin"></div><span id="upload-status">Uploadingâ¦</span></div>
+    <button id="upload-btn" disabled style="margin-top:8px">⬆ Upload &amp; Analyse</button>
+    <div id="uploading-bar"><div class="spin"></div><span id="upload-status">Uploading…</span></div>
   </div>
 
   <div id="accounts-wrap" style="display:none">
@@ -193,10 +193,10 @@ body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--bg);co
     <div id="account-cards" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
 
-  <button id="reset-btn" style="display:none">ð Reset &amp; Upload New</button>
+  <button id="reset-btn" style="display:none">🗑 Reset &amp; Upload New</button>
 </aside>
 
-<!-- âââ MAIN ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+<!-- ═══ MAIN ══════════════════════════════════════════════════════════════ -->
 <main id="main">
   <div id="chat-header">
     <div>
@@ -208,31 +208,31 @@ body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--bg);co
 
   <div id="messages">
     <div id="welcome">
-      <div class="wicon">ð¦</div>
+      <div class="wicon">🏦</div>
       <h3>Your AI Money Analyst</h3>
-      <p>Upload any month's bank statement PDFs â I'll parse every transaction and answer your questions with charts and insights.</p>
+      <p>Upload any month's bank statement PDFs — I'll parse every transaction and answer your questions with charts and insights.</p>
       <div class="chips">
-        <div class="chip" onclick="prefill(this)">ð Full overview with charts</div>
-        <div class="chip" onclick="prefill(this)">ð¸ Where did my money go?</div>
-        <div class="chip" onclick="prefill(this)">ð« Is my academy profitable?</div>
-        <div class="chip" onclick="prefill(this)">ð° Can I safely take out â¹5L?</div>
-        <div class="chip" onclick="prefill(this)">ð Income vs spending breakdown</div>
+        <div class="chip" onclick="prefill(this)">📊 Full overview with charts</div>
+        <div class="chip" onclick="prefill(this)">💸 Where did my money go?</div>
+        <div class="chip" onclick="prefill(this)">🏫 Is my academy profitable?</div>
+        <div class="chip" onclick="prefill(this)">💰 Can I safely take out ₹5L?</div>
+        <div class="chip" onclick="prefill(this)">📈 Income vs spending breakdown</div>
       </div>
     </div>
   </div>
 
   <div id="input-area">
     <div class="sug-chips" id="sug-chips" style="display:none">
-      <div class="sch" onclick="sendChip('Give me a full money overview with charts')">ð Overview</div>
-      <div class="sch" onclick="sendChip('What are my top 5 biggest expenses?')">ð¸ Top expenses</div>
-      <div class="sch" onclick="sendChip('Show income vs spending as a chart')">ð Income vs spend</div>
-      <div class="sch" onclick="sendChip('Break down spending by category as a doughnut chart')">ð© Categories</div>
-      <div class="sch" onclick="sendChip('How much did I spend on salaries and rent?')">ð¥ Payroll & rent</div>
-      <div class="sch" onclick="sendChip('What is my net worth change this month?')">ð¼ Net worth</div>
+      <div class="sch" onclick="sendChip('Give me a full money overview with charts')">📊 Overview</div>
+      <div class="sch" onclick="sendChip('What are my top 5 biggest expenses?')">💸 Top expenses</div>
+      <div class="sch" onclick="sendChip('Show income vs spending as a chart')">📈 Income vs spend</div>
+      <div class="sch" onclick="sendChip('Break down spending by category as a doughnut chart')">🍩 Categories</div>
+      <div class="sch" onclick="sendChip('How much did I spend on salaries and rent?')">👥 Payroll & rent</div>
+      <div class="sch" onclick="sendChip('What is my net worth change this month?')">💼 Net worth</div>
     </div>
     <div class="input-row">
-      <textarea id="msg-input" rows="1" placeholder="Ask anything about your financesâ¦" disabled></textarea>
-      <button id="send-btn" disabled title="Send">â¤</button>
+      <textarea id="msg-input" rows="1" placeholder="Ask anything about your finances…" disabled></textarea>
+      <button id="send-btn" disabled title="Send">➤</button>
     </div>
   </div>
 </main>
@@ -240,7 +240,7 @@ body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--bg);co
 <div id="toast"></div>
 
 <script>
-// âââ Client State (stateless backend â we own everything) âââââââââââââââââ
+// ═══ Client State (stateless backend — we own everything) ═════════════════
 const S = {
   accounts: [],       // Parsed account data from server (sent with every chat)
   history: [],        // [{role, content}] conversation history
@@ -249,26 +249,26 @@ const S = {
   pendingCharts: {},
 };
 
-// âââ Toast ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ═══ Toast ════════════════════════════════════════════════════════════════
 function toast(msg, type='ok') {
   const el = document.getElementById('toast');
-  el.textContent = (type==='ok'?'â ':'â ') + msg;
+  el.textContent = (type==='ok'?'✅ ':'❌ ') + msg;
   el.className = `show ${type}`;
   clearTimeout(toast._t);
   toast._t = setTimeout(()=>el.className='', 3500);
 }
 
-// âââ Format âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ═══ Format ═══════════════════════════════════════════════════════════════
 function fmt(n) {
-  if (!n && n!==0) return 'â¹0';
+  if (!n && n!==0) return '₹0';
   const abs = Math.abs(n);
-  if (abs>=10000000) return `â¹${(n/10000000).toFixed(1)}Cr`;
-  if (abs>=100000) return `â¹${(n/100000).toFixed(1)}L`;
-  if (abs>=1000) return `â¹${(n/1000).toFixed(1)}k`;
-  return `â¹${n.toFixed(0)}`;
+  if (abs>=10000000) return `₹${(n/10000000).toFixed(1)}Cr`;
+  if (abs>=100000) return `₹${(n/100000).toFixed(1)}L`;
+  if (abs>=1000) return `₹${(n/1000).toFixed(1)}k`;
+  return `₹${n.toFixed(0)}`;
 }
 
-// âââ Drop zone ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ═══ Drop zone ════════════════════════════════════════════════════════════
 const dz = document.getElementById('drop-zone');
 const fi = document.getElementById('file-input');
 
@@ -289,7 +289,7 @@ function onFileSelect() {
   document.getElementById('upload-btn').disabled = false;
 }
 
-// âââ Upload âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ═══ Upload ═══════════════════════════════════════════════════════════════
 document.getElementById('upload-btn').addEventListener('click', doUpload);
 
 function detectPDFPassword(filename) {
@@ -309,7 +309,7 @@ async function extractTextFromPDF(file) {
     const page = await pdf.getPage(p);
     const content = await page.getTextContent();
 
-    // Sort items by y (topâbottom) then x (leftâright) â essential for tables
+    // Sort items by y (top→bottom) then x (left→right) — essential for tables
     const items = content.items.filter(i => i.str && i.str.trim());
     items.sort((a, b) => {
       const yDiff = Math.round(b.transform[5]) - Math.round(a.transform[5]);
@@ -352,11 +352,11 @@ async function doUpload() {
   bar.classList.add('show');
 
   try {
-    // Extract text client-side â avoids Vercel's 4.5MB body limit
+    // Extract text client-side — avoids Vercel's 4.5MB body limit
     const extractedFiles = [];
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
-      status.textContent = `Reading ${f.name} (${i+1}/${files.length})â¦`;
+      status.textContent = `Reading ${f.name} (${i+1}/${files.length})…`;
       try {
         const text = await extractTextFromPDF(f);
         extractedFiles.push({ filename: f.name, text });
@@ -365,7 +365,7 @@ async function doUpload() {
       }
     }
 
-    status.textContent = 'Parsing with Claude Haikuâ¦';
+    status.textContent = 'Parsing with Claude Haiku…';
     const res = await fetch('/api/upload', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -403,9 +403,9 @@ function welcomeSummary(accounts) {
   const credits = accounts.reduce((s,a)=>s+(a.total_credits||0), 0);
   const debits  = accounts.reduce((s,a)=>s+(a.total_debits||0), 0);
   const period  = accounts[0]?.period || '';
-  return `â **${accounts.length} account(s) loaded** â ${period}\n\n` +
-    `**Snapshot:**\n- ð° Total closing balance: **${fmt(closing)}**\n` +
-    `- ð¥ Total in: **${fmt(credits)}**\n- ð¤ Total out: **${fmt(debits)}**\n\n` +
+  return `✅ **${accounts.length} account(s) loaded** — ${period}\n\n` +
+    `**Snapshot:**\n- 💰 Total closing balance: **${fmt(closing)}**\n` +
+    `- 📥 Total in: **${fmt(credits)}**\n- 📤 Total out: **${fmt(debits)}**\n\n` +
     `Ask me anything, or try **"Full overview with charts"** to see the complete picture!`;
 }
 
@@ -417,9 +417,9 @@ function renderSidebar(accounts) {
     card.className = 'ac-card';
     card.innerHTML = `
       <div class="ac-bank">${a.bank||'Unknown Bank'}</div>
-      <div class="ac-type">${a.account_type||''} Â·Â·Â·${String(a.account_number||'').slice(-4)}</div>
+      <div class="ac-type">${a.account_type||''} ···${String(a.account_number||'').slice(-4)}</div>
       <div class="ac-balance">${fmt(a.closing_balance)}</div>
-      <div class="ac-period">${a.period||''} Â· ${(a.transactions||[]).length} txns</div>
+      <div class="ac-period">${a.period||''} · ${(a.transactions||[]).length} txns</div>
       <div class="ac-grid">
         <div class="ac-stat g"><div class="lbl">In</div><div class="val">${fmt(a.total_credits)}</div></div>
         <div class="ac-stat r"><div class="lbl">Out</div><div class="val">${fmt(a.total_debits)}</div></div>
@@ -439,10 +439,10 @@ function enableChat() {
   document.getElementById('send-btn').disabled = false;
   document.getElementById('sug-chips').style.display = 'flex';
   document.getElementById('dot').classList.add('live');
-  document.getElementById('header-sub').textContent = 'Statements loaded â ask me anything';
+  document.getElementById('header-sub').textContent = 'Statements loaded — ask me anything';
 }
 
-// âââ Reset ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ═══ Reset ════════════════════════════════════════════════════════════════
 document.getElementById('reset-btn').addEventListener('click', async ()=>{
   await fetch('/api/reset', {method:'POST'}).catch(()=>{});
   S.accounts = [];
@@ -463,7 +463,7 @@ document.getElementById('reset-btn').addEventListener('click', async ()=>{
   toast('Reset! Upload new statements.');
 });
 
-// âââ Chat ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ═══ Chat ══════════════════════════════════════════════════════════════════
 document.getElementById('msg-input').addEventListener('keydown', e=>{
   if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });
@@ -474,7 +474,7 @@ document.getElementById('msg-input').addEventListener('input', function(){
 document.getElementById('send-btn').addEventListener('click', send);
 
 function prefill(el) {
-  document.getElementById('msg-input').value = el.textContent.replace(/^[^\wâ¹]*/,'').trim();
+  document.getElementById('msg-input').value = el.textContent.replace(/^[^\w₹]*/,'').trim();
 }
 function sendChip(text) {
   document.getElementById('msg-input').value = text;
@@ -523,14 +523,14 @@ async function send() {
 
   } catch(e) {
     removeTyping();
-    addBotMessage('â '+e.message);
+    addBotMessage('❌ '+e.message);
   } finally {
     S.streaming = false;
     document.getElementById('send-btn').disabled = false;
   }
 }
 
-// âââ Message rendering ââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ═══ Message rendering ════════════════════════════════════════════════════
 function scrollBot() {
   const m = document.getElementById('messages');
   m.scrollTop = m.scrollHeight;
@@ -540,7 +540,7 @@ function addUserMsg(text) {
   const msgs = document.getElementById('messages');
   const d = document.createElement('div');
   d.className = 'msg user';
-  d.innerHTML = `<div class="av">ð¤</div><div class="bubble">${esc(text).replace(/\n/g,'<br>')}</div>`;
+  d.innerHTML = `<div class="av">👤</div><div class="bubble">${esc(text).replace(/\n/g,'<br>')}</div>`;
   msgs.appendChild(d);
   scrollBot();
 }
@@ -550,7 +550,7 @@ function addBotMessage(text) {
   const d = document.createElement('div');
   d.className = 'msg bot';
   const id = 'bm'+Date.now();
-  d.innerHTML = `<div class="av">ð¤</div><div class="bubble" id="${id}">${renderBot(text)}</div>`;
+  d.innerHTML = `<div class="av">🤖</div><div class="bubble" id="${id}">${renderBot(text)}</div>`;
   msgs.appendChild(d);
   scrollBot();
   renderCharts(id);
@@ -560,7 +560,7 @@ function addTyping() {
   const msgs = document.getElementById('messages');
   const d = document.createElement('div');
   d.className = 'msg bot'; d.id = 'typing';
-  d.innerHTML = `<div class="av">ð¤</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  d.innerHTML = `<div class="av">🤖</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
   msgs.appendChild(d);
   scrollBot();
 }
@@ -574,7 +574,7 @@ function startStream() {
   const d = document.createElement('div');
   d.className = 'msg bot';
   const id = 'bs'+Date.now();
-  d.innerHTML = `<div class="av">ð¤</div><div class="bubble" id="${id}"></div>`;
+  d.innerHTML = `<div class="av">🤖</div><div class="bubble" id="${id}"></div>`;
   msgs.appendChild(d);
   return id;
 }
@@ -583,7 +583,7 @@ function updateStream(id, fullText) {
   const el = document.getElementById(id);
   if (!el) return;
   const display = fullText.replace(/<chart>[\s\S]*?<\/chart>/g,
-    '<em style="color:var(--accent);font-size:.82rem">[ ð Building chartâ¦ ]</em>');
+    '<em style="color:var(--accent);font-size:.82rem">[ 📊 Building chart… ]</em>');
   el.innerHTML = md(display);
   scrollBot();
 }
@@ -596,7 +596,7 @@ function finalizeStream(id, fullText) {
   scrollBot();
 }
 
-// âââ Markdown âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ═══ Markdown ═════════════════════════════════════════════════════════════
 function esc(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
@@ -607,14 +607,14 @@ function md(text) {
     .replace(/\*(.+?)\*/g,'<em>$1</em>')
     .replace(/`([^`]+)`/g,'<code>$1</code>')
     .replace(/^#{1,4} (.+)$/gm,'<h4>$1</h4>')
-    .replace(/^[-â¢] (.+)$/gm,'<li>$1</li>')
+    .replace(/^[-•] (.+)$/gm,'<li>$1</li>')
     .replace(/(<li>[\s\S]*?<\/li>)+/g,s=>`<ul>${s}</ul>`)
     .replace(/\n\n/g,'</p><p>')
     .replace(/\n/g,'<br>');
 }
 
 function renderBot(text) {
-  // Extract charts â placeholders
+  // Extract charts → placeholders
   const processed = text.replace(/<chart>([\s\S]*?)<\/chart>/g, (_, json) => {
     const cid = `c${++S.chartId}`;
     S.pendingCharts[cid] = json.trim();
@@ -671,7 +671,7 @@ function renderCharts(containerId) {
               callbacks: {
                 label(ctx) {
                   const v = ctx.parsed?.y ?? ctx.parsed?.x ?? ctx.raw ?? 0;
-                  if (typeof v === 'number') return ` â¹${v.toLocaleString('en-IN')}`;
+                  if (typeof v === 'number') return ` ₹${v.toLocaleString('en-IN')}`;
                   return ` ${v}`;
                 }
               }
@@ -682,7 +682,7 @@ function renderCharts(containerId) {
               ticks: {
                 color:'#8892b0', font:{size:10},
                 callback: isHoriz
-                  ? v => (typeof v==='number' ? (v>=100000?`â¹${(v/100000).toFixed(1)}L`:`â¹${(v/1000).toFixed(0)}k`) : v)
+                  ? v => (typeof v==='number' ? (v>=100000?`₹${(v/100000).toFixed(1)}L`:`₹${(v/1000).toFixed(0)}k`) : v)
                   : undefined
               },
               grid: { color:'#252b4a' },
@@ -691,7 +691,7 @@ function renderCharts(containerId) {
               ticks: {
                 color:'#8892b0', font:{size:10},
                 callback: !isHoriz
-                  ? v => (typeof v==='number' ? (v>=100000?`b¹${(v/100000).toFixed(1)}L`:`â¹${(v/1000).toFixed(0)}k`) : v)
+                  ? v => (typeof v==='number' ? (v>=100000?`b��${(v/100000).toFixed(1)}L`:`₹${(v/1000).toFixed(0)}k`) : v)
                   : undefined
               },
               grid: { color:'#252b4a' },
@@ -710,7 +710,7 @@ function renderCharts(containerId) {
   });
 }
 
-// âââ API key persistence ââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ═══ API key persistence ══════════════════════════════════════════════════
 const saved = localStorage.getItem('fc_key');
 if (saved) document.getElementById('api-key').value = saved;
 document.getElementById('api-key').addEventListener('change', function() {
