@@ -1,1 +1,721 @@
-<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8"/>\n<meta name="viewport" content="width=device-width, initial-scale=1.0"/>\n<title>FinanceChat — AI Money Analyst</title>\n<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>\n<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>\n<script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>\n<style>\n:root {\n  --bg:#0d0f1a; --sb:#12152a; --card:#1a1f38; --border:#252b4a;\n  --accent:#6366f1; --green:#10b981; --yellow:#f59e0b; --red:#ef4444;\n  --text:#e2e8f0; --muted:#8892b0;\n  --radius:12px; --shadow:0 4px 24px rgba(0,0,0,.5);\n}\n*{box-sizing:border-box;margin:0;padding:0}\nhtml,body{height:100%;overflow:hidden}\nbody{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex}\n\n/* ─── SIDEBAR ─────────────────────────────────────────────────── */\n#sidebar{\n  width:300px;min-width:260px;background:var(--sb);\n  border-right:1px solid var(--border);\n  display:flex;flex-direction:column;padding:18px 14px;gap:14px;\n  overflow-y:auto;overflow-x:hidden;\n}\n#sidebar::-webkit-scrollbar{width:4px}\n#sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}\n\n.logo{font-size:1.25rem;font-weight:800;color:var(--accent);display:flex;align-items:center;gap:8px}\n.logo span{font-size:1.4rem}\n.sect-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:3px}\n\n/* API key */\n.api-row input{\n  width:100%;background:var(--card);border:1px solid var(--border);\n  color:var(--text);border-radius:8px;padding:8px 12px;font-size:.82rem;outline:none;\n}\n.api-row input:focus{border-color:var(--accent)}\n\n/* Drop zone */\n#drop-zone{\n  background:var(--card);border:2px dashed var(--border);border-radius:var(--radius);\n  padding:18px;text-align:center;cursor:pointer;transition:all .2s;\n}\n#drop-zone:hover,#drop-zone.drag-over{border-color:var(--accent);background:#1e2244}\n#drop-zone .dz-icon{font-size:1.8rem;margin-bottom:6px}\n#drop-zone p{font-size:.8rem;color:var(--muted)}\n#drop-zone strong{color:var(--accent)}\n#file-input{display:none}\n#selected-files{font-size:.73rem;color:var(--muted);margin-top:5px;display:none;word-break:break-all}\n#upload-btn{\n  width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;\n  padding:9px;font-size:.85rem;font-weight:600;cursor:pointer;transition:opacity .2s;\n}\n#upload-btn:disabled{opacity:.4;cursor:not-allowed}\n#upload-btn:not(:disabled):hover{opacity:.85}\n#uploading-bar{\n  display:none;align-items:center;gap:8px;\n  background:var(--card);border:1px solid var(--border);\n  border-radius:8px;padding:9px 12px;font-size:.8rem;color:var(--muted);\n}\n#uploading-bar.show{display:flex}\n.spin{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}\n@keyframes spin{to{transform:rotate(360deg)}}\n\n/* Account cards */\n.ac-card{\n  background:var(--card);border:1px solid var(--border);\n  border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:5px;\n}\n.ac-bank{font-size:.85rem;font-weight:700;color:var(--accent)}\n.ac-type{font-size:.73rem;color:var(--muted)}\n.ac-balance{font-size:1.1rem;font-weight:700;color:var(--green)}\n.ac-period{font-size:.7rem;color:var(--muted)}\n.ac-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:3px}\n.ac-stat{background:#0d0f1a;border-radius:6px;padding:5px 8px}\n.ac-stat .lbl{font-size:.62rem;color:var(--muted);text-transform:uppercase}\n.ac-stat .val{font-weight:700;font-size:.8rem}\n.ac-stat.g .val{color:var(--green)}\n.ac-stat.r .val{color:var(--red)}\n\n#reset-btn{\n  width:100%;background:transparent;border:1px solid #ef444450;color:var(--red);\n  border-radius:8px;padding:7px;font-size:.78rem;cursor:pointer;transition:all .2s;margin-top:auto;\n}\n#reset-btn:hover{background:#ef444415}\n\n/* ─── MAIN ─────────────────────────────────────────────────────── */\n#main{flex:1;display:flex;flex-direction:column;overflow:hidden}\n\n#chat-header{\n  padding:14px 22px;border-bottom:1px solid var(--border);\n  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;\n}\n.header-title{font-size:.95rem;font-weight:700}\n.header-sub{font-size:.75rem;color:var(--muted);margin-top:1px}\n.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block;margin-right:6px;transition:background .3s}\n.dot.live{background:var(--green)}\n\n#messages{flex:1;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:18px;scroll-behavior:smooth}\n#messages::-webkit-scrollbar{width:5px}\n#messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}\n\n/* Welcome */\n#welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;text-align:center;padding:40px}\n#welcome .wicon{font-size:3rem}\n#welcome h3{font-size:1.3rem;font-weight:800}\n#welcome p{color:var(--muted);font-size:.88rem;max-width:380px;line-height:1.65}\n.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:6px}\n.chip{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:7px 15px;font-size:.78rem;cursor:pointer;transition:all .2s;color:var(--text)}\n.chip:hover{border-color:var(--accent);color:var(--accent);background:#1e2244}\n\n/* Messages */\n.msg{display:flex;gap:9px;max-width:840px;width:100%}\n.msg.user{align-self:flex-end;flex-direction:row-reverse}\n.msg.bot{align-self:flex-start}\n.av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0;margin-top:2px}\n.user .av{background:var(--accent)}\n.bot .av{background:var(--card);border:1px solid var(--border)}\n.bubble{padding:11px 15px;border-radius:15px;font-size:.88rem;line-height:1.7;max-width:calc(100% - 42px)}\n.user .bubble{background:var(--accent);border-bottom-right-radius:3px}\n.bot .bubble{background:var(--card);border:1px solid var(--border);border-bottom-left-radius:3px}\n.bubble strong{color:var(--green)}\n.bubble h3,.bubble h4{color:var(--accent);margin:10px 0 4px}\n.bubble ul,.bubble ol{padding-left:18px}\n.bubble li{margin:3px 0}\n.bubble code{background:#0d0f1a;padding:2px 5px;border-radius:4px;font-family:monospace;font-size:.82em}\n.bubble table{border-collapse:collapse;width:100%;margin:8px 0;font-size:.82rem}\n.bubble th{background:#0d0f1a;padding:6px 10px;text-align:left;color:var(--accent);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em}\n.bubble td{padding:6px 10px;border-bottom:1px solid var(--border)}\n\n/* Chart */\n.chart-wrap{background:#0d0f1a;border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-top:10px}\n.chart-title{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em}\n.chart-canvas-wrap{position:relative;height:240px}\n\n/* Typing */\n.typing{display:flex;gap:4px;align-items:center;padding:6px 2px}\n.typing span{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:bounce .9s infinite}\n.typing span:nth-child(2){animation-delay:.15s}\n.typing span:nth-child(3){animation-delay:.3s}\n@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}\n\n/* Input */\n#input-area{padding:14px 22px;border-top:1px solid var(--border);background:var(--sb);flex-shrink:0}\n.sug-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}\n.sch{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:5px 11px;font-size:.75rem;cursor:pointer;color:var(--muted);transition:all .15s;white-space:nowrap}\n.sch:hover{border-color:var(--accent);color:var(--accent)}\n.input-row{display:flex;gap:9px;align-items:flex-end;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:9px 12px;transition:border-color .2s}\n.input-row:focus-within{border-color:var(--accent)}\n#msg-input{flex:1;background:transparent;border:none;color:var(--text);font-size:.88rem;resize:none;outline:none;max-height:110px;line-height:1.5;font-family:inherit}\n#send-btn{background:var(--accent);border:none;border-radius:9px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.95rem;transition:opacity .2s;flex-shrink:0}\n#send-btn:disabled{opacity:.35;cursor:not-allowed}\n#send-btn:not(:disabled):hover{opacity:.82}\n\n/* Toast */\n#toast{position:fixed;bottom:22px;right:22px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:.82rem;z-index:999;display:none;align-items:center;gap:8px;box-shadow:var(--shadow);max-width:320px}\n#toast.show{display:flex}\n#toast.ok{border-color:var(--green)}\n#toast.err{border-color:var(--red)}\n</style>\n</head><body>\n\n<!-- ═══ SIDEBAR ═══════════════════════════════════════════════════════════ -->\n<aside id="sidebar">\n  <div class="logo"><span>💹</span> FinanceChat</div>\n\n  <div>\n    <div class="sect-label">Anthropic API Key</div>\n    <div class="api-row">\n      <input type="password" id="api-key" placeholder="sk-ant-api03-…" autocomplete="off"/>\n    </div>\n  </div>\n\n  <div>\n    <div class="sect-label">Upload Bank Statements</div>\n    <div id="drop-zone" onclick="document.getElementById('file-input').click()">\n      <div class="dz-icon">📂</div>\n      <p>Drop PDFs here or <strong>click to browse</strong></p>\n      <p style="margin-top:3px;font-size:.72rem">Passwords auto-read from filename (e.g. HDFC (123456).pdf)</p>\n      <input type="file" id="file-input" multiple accept=".pdf"/>\n    </div>\n    <div id="selected-files"></div>\n    <button id="upload-btn" disabled style="margin-top:8px">⬆ Upload &amp; Analyse</button>\n    <div id="uploading-bar"><div class="spin"></div><span id="upload-status">Uploading…</span></div>\n  </div>\n\n  <div id="accounts-wrap" style="display:none">\n    <div class="sect-label">Loaded Accounts</div>\n    <div id="account-cards" style="display:flex;flex-direction:column;gap:10px"></div>\n  </div>\n\n  <button id="reset-btn" style="display:none">🗑 Reset &amp; Upload New</button>\n</aside>\n\n<!-- ═══ MAIN ══════════════════════════════════════════════════════════════ -->\n<main id="main">\n  <div id="chat-header">\n    <div>\n      <div class="header-title"><span class="dot" id="dot"></span>FinanceChat</div>\n      <div class="header-sub" id="header-sub">Upload your statements to get started</div>\n    </div>\n    <div style="font-size:.75rem;color:var(--muted)" id="period-badge"></div>\n  </div>\n\n  <div id="messages">\n    <div id="welcome">\n      <div class="wicon">🏦</div>\n      <h3>Your AI Money Analyst</h3>\n      <p>Upload any month's bank statement PDFs — I'll parse every transaction and answer your questions with charts and insights.</p>\n      <div class="chips">\n        <div class="chip" onclick="prefill(this)">📊 Full overview with charts</div>\n        <div class="chip" onclick="prefill(this)">💸 Where did my money go?</div>\n        <div class="chip" onclick="prefill(this)">🏫 Is my academy profitable?</div>\n        <div class="chip" onclick="prefill(this)">💰 Can I safely take out ₹5L?</div>\n        <div class="chip" onclick="prefill(this)">📈 Income vs spending breakdown</div>\n      </div>\n    </div>\n  </div>\n\n  <div id="input-area">\n    <div class="sug-chips" id="sug-chips" style="display:none">\n      <div class="sch" onclick="sendChip('Give me a full money overview with charts')">📊 Overview</div>\n      <div class="sch" onclick="sendChip('What are my top 5 biggest expenses?')">💸 Top expenses</div>\n      <div class="sch" onclick="sendChip('Show income vs spending as a chart')">📈 Income vs spend</div>\n      <div class="sch" onclick="sendChip('Break down spending by category as a doughnut chart')">🍩 Categories</div>\n      <div class="sch" onclick="sendChip('How much did I spend on salaries and rent?')">👥 Payroll & rent</div>\n      <div class="sch" onclick="sendChip('What is my net worth change this month?')">💼 Net worth</div>\n    </div>\n    <div class="input-row">\n      <textarea id="msg-input" rows="1" placeholder="Ask anything about your finances…" disabled></textarea>\n      <button id="send-btn" disabled title="Send">➤</button>\n    </div>\n  </div>\n</main>\n\n<div id="toast"></div>\n\n<script>// ═══ Client State (stateless backend — we own everything) =════════════════\nconst S = {\n  accounts: [],       // Parsed account data from server (sent with every chat)\n  history: [],        // [{role, content}] conversation history\n  streaming: false,\n  chartId: 0,\n  pendingCharts: {},\n};\n\n// ═══ Toast ════════════════════════════════════════════════════════════════\nfunction toast(msg, type='ok') {\n  const el = document.getElementById('toast');\n  el.textContent = (type==='ok'?'✅ ':' ❌ ') + msg;\n  el.className = `show ${type}`;\n  clearTimeout(toast._t);\n  toast._t = setTimeout(()=>el.className='', 3500);\n}\n\n// ═══ Format ═══════════════════════════════════════════════════════════════\nfunction fmt(n) {\n  if (!n && n!==0) return '₹0';\n  const abs = Math.abs(n);\n  if (abs>=10000000) return `₹${(n/10000000).toFixed(1)}Cr`;\n  if (abs>=100000) return `₹${(n/100000).toFixed(1)}L`;\n  if (abs>=1000) return `₹${(n/1000).toFixed(1)}k`;\n  return `₹${n.toFixed(0)}`;\n}\n\n// ═══ Drop zone ════════════════════════════════════════════════════════════\nconst dz = document.getElementById('drop-zone');\nconst fi = document.getElementById('file-input');\n\ndz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('drag-over')});\ndz.addEventListener('dragleave', ()=>dz.classList.remove('drag-over'));\ndz.addEventListener('drop', e=>{\n  e.preventDefault(); dz.classList.remove('drag-over');\n  if (e.dataTransfer.files.length) { fi.files=e.dataTransfer.files; onFileSelect(); }\n});\nfi.addEventListener('change', onFileSelect);\n\nfunction onFileSelect() {\n  const files = fi.files;\n  if (!files.length) return;\n  const sfEl = document.getElementById('selected-files');\n  sfEl.textContent = Array.from(files).map(f=>f.name).join(', ');\n  sfEl.style.display = 'block';\n  document.getElementById('upload-btn').disabled = false;\n}\n\n// ═══ Upload ═══════════════════════════════════════════════════════════════\ndocument.getElementById('upload-btn').addEventListener('click', doUpload);\n\nfunction detectPDFPassword(filename) {\n  const m = filename.match(/\\((\\d+)\\)/);\n  return m ? m[1] : null;\n}\n\nasync function extractTextFromPDF(file) {\n  const arrayBuffer = await file.arrayBuffer();\n  const password = detectPDFPassword(file.name);\n  const loadOpts = { data: arrayBuffer };\n  if (password) loadOpts.password = password;\n  const pdf = await pdfjsLib.getDocument(loadOpts).promise;\n  let fullText = '';\n\n  for (let p = 1; p <= pdf.numPages; p++) {\n    const page = await pdf.getPage(p);\n    const content = await page.getTextContent();\n\n    // Sort items by y (top→bottom) then x (left→right) — essential for tables\n    const items = content.items.filter(i => i.str && i.str.trim());\n    items.sort((a, b) => {\n      const yDiff = Math.round(b.transform[5]) - Math.round(a.transform[5]);\n      if (Math.abs(yDiff) > 3) return yDiff;\n      return a.transform[4] - b.transform[4];\n    });\n\n    // Group into lines by y proximity, add tab between columns\n    let lastY = null, lastX = null, line = [];\n    for (const item of items) {\n      const y = Math.round(item.transform[5]);\n      const x = item.transform[4];\n      if (lastY !== null && Math.abs(y - lastY) > 3) {\n        fullText += line.join('\\t') + '\\n';\n        line = [];\n        lastX = null;\n      }\n      // Add extra space for large horizontal gaps (column separators)\n      if (lastX !== null && (x - lastX) > 20) line.push('');\n      line.push(item.str.trim());\n      lastY = y;\n      lastX = x + (item.width || 0);\n    }\n    if (line.length) fullText += line.join('\\t') + '\\n';\n    fullText += '\\n--- page break ---\\n';\n  }\n  return fullText;\n}\n\nasync function doUpload() {\n  const apiKey = document.getElementById('api-key').value.trim();\n  if (!apiKey) { toast('Enter your Anthropic API key first', 'err'); return; }\n  const files = fi.files;\n  if (!files.length) { toast('Select PDF files first', 'err'); return; }\n\n  const btn = document.getElementById('upload-btn');\n  const bar = document.getElementById('uploading-bar');\n  const status = document.getElementById('upload-status');\n  btn.disabled = true;\n  bar.classList.add('show');\n\n  try {\n    // Extract text client-side — avoids Vercel's 4.5MB body limit\n    const extractedFiles = [];\n    for (let i = 0; i < files.length; i++) {\n      const f = files[i];\n      status.textContent = `Reading ${f.name} (${i+1}/${files.length})…`;\n      try {\n        const text = await extractTextFromPDF(f);\n        extractedFiles.push({ filename: f.name, text });\n      } catch(e) {\n        extractedFiles.push({ filename: f.name, error: `PDF read failed: ${e.message}` });\n      }\n    }\n\n    status.textContent = 'Parsing with Claude Haiku…';\n    const res = await fetch('/api/upload', {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({ api_key: apiKey, files: extractedFiles })\n    });\n    const data = await res.json();\n    bar.classList.remove('show');\n\n    if (!res.ok) throw new Error(data.error || 'Upload failed');\n\n    const good = data.accounts.filter(a=>!a.error);\n    const bad  = data.accounts.filter(a=> a.error);\n\n    bad.forEach(b=>toast(`${b.filename}: ${b.error}`, 'err'));\n\n    if (good.length) {\n      S.accounts = good;\n      S.history = [];\n      renderSidebar(good);\n      enableChat();\n      toast(`${good.length} account(s) ready!`);\n      const doc = document.getElementById('welcome');\n      if (doc) doc.remove();\n      addBotMessage(welcomeSummary(good));\n    }\n  } catch(e) {\n    bar.classList.remove('show');\n    btn.disabled = false;\n    toast(e.message, 'err');\n  }\n}\n\nfunction welcomeSummary(accounts) {\n  const closing = accounts.reduce((s,a)=>s+(a.closing_balance||0), 0);\n  const credits = accounts.reduce((s,a)=>s+(a.total_credits||0), 0);\n  const debits  = accounts.reduce((s,a)=>s+(a.total_debits||0), 0);\n  const period  = accounts[0]?.period || '';\n  return `✅ **${accounts.length} account(s) loaded** — ${period}\\n\\n` +\n    `**Snapshot:**\\n- 💰 Total closing balance: **${fmt(closing)}**\\n` +\n    `- 📥 Total in: **${fmt(credits)}**\\n- 📤 Total out: **${fmt(debits)}**\\n\\n` +\n    `Ask me anything, or try **"Full overview with charts"** to see the complete picture!`;\n}\n\nfunction renderSidebar(accounts) {\n  const container = document.getElementById('account-cards');\n  container.innerHTML = '';\n  accounts.forEach(a=>{\n    const card = document.createElement('div');\n    card.className = 'ac-card';\n    card.innerHTML = `\n      <div class="ac-bank">${a.bank||'Unknown Bank'}</div>\n      <div class="ac-type">${a.account_type||''} ···${String(a.account_number||'').slice(-4)}</div>\n      <div class="ac-balance">${fmt(a.closing_balance)}</div>\n      <div class="ac-period">${a.period||''} · ${(a.transactions||[]).length} txns</div>\n      <div class="ac-grid">\n        <div class="ac-stat g"><div class="lbl">In</div><div class="val">${fmt(a.total_credits)}</div></div>\n        <div class="ac-stat r"><div class="lbl">Out</div><div class="val">${fmt(a.total_debits)}</div></div>\n      </div>`;\n    container.appendChild(card);\n  });\n  document.getElementById('accounts-wrap').style.display = 'block';\n  document.getElementById('reset-btn').style.display = 'block';\n\n  // Period badge\n  const p = accounts[0]?.period;\n  if (p) document.getElementById('period-badge').textContent = p;\n}\n\nfunction enableChat() {\n  document.getElementById('msg-input').disabled = false;\n  document.getElementById('send-btn').disabled = false;\n  document.getElementById('sug-chips').style.display = 'flex';\n  document.getElementById('dot').classList.add('live');\n  document.getElementById('header-sub').textContent = 'Statements loaded — ask me anything';\n}\n\n// ═══ Reset ════════════════════════════════════════════════════════════════\ndocument.getElementById('reset-btn').addEventListener('click', async ()=>{\n  await fetch('/api/reset', {method:'POST'}).catch(()=>{});\n  S.accounts = [];\n  S.history = [];\n  document.getElementById('account-cards').innerHTML = '';\n  document.getElementById('accounts-wrap').style.display = 'none';\n  document.getElementById('reset-btn').style.display = 'none';\n  document.getElementById('msg-input').disabled = true;\n  document.getElementById('send-btn').disabled = true;\n  document.getElementById('sug-chips').style.display = 'none';\n  document.getElementById('dot').classList.remove('live');\n  document.getElementById('header-sub').textContent = 'Upload your statements to get started';\n  document.getElementById('period-badge').textContent = '';\n  document.getElementById('messages').innerHTML = '';\n  fi.value = '';\n  document.getElementById('selected-files').style.display = 'none';\n  document.getElementById('upload-btn').disabled = true;\n  toast('Reset! Upload new statements.');\n});\n\n// ═══ Chat ══════════════════════════════════════════════════════════════════\ndocument.getElementById('msg-input').addEventListener('keydown', e=>{\n  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); send(); }\n});\ndocument.getElementById('msg-input').addEventListener('input', function(){\n  this.style.height='auto';\n  this.style.height=Math.min(this.scrollHeight,110)+'px';\n});\ndocument.getElementById('send-btn').addEventListener('click', send);\n\nfunction prefill(el) {\n  document.getElementById('msg-input').value = el.textContent.replace(/^[^\\w₹]*/,'').trim();\n}\nfunction sendChip(text) {\n  document.getElementById('msg-input').value = text;\n  send();\n}\n\nasync function send() {\n  if (S.streaming) return;\n  const input = document.getElementById('msg-input');\n  const text = input.value.trim();\n  if (!text) return;\n  const apiKey = document.getElementById('api-key').value.trim();\n  if (!apiKey) { toast('Enter your API key', 'err'); return; }\n\n  input.value = '';\n  input.style.height = 'auto';\n  S.streaming = true;\n  document.getElementById('send-btn').disabled = true;\n\n  addUserMsg(text);\n  addTyping();\n\n  try {\n    const res = await fetch('/api/chat', {\n      method: 'POST',\n      headers: {'Content-Type':'application/json'},\n      body: JSON.stringify({\n        message: text,\n        api_key: apiKey,\n        accounts: S.accounts,    // Full parsed data sent every time\n        history: S.history,       // Full conversation history\n      }),\n    });\n\n    const data = await res.json().catch(()=>({error:'Request failed'}));\n    if (!res.ok || data.error) throw new Error(data.error || 'Chat failed');\n\n    removeTyping();\n    const full = data.response || '';\n    addBotMessage(full);\n\n    // Save to history (trim to last 20 exchanges to avoid huge payloads)\n    S.history.push({role:'user', content:text});\n    S.history.push({role:'assistant', content:full});\n    if (S.history.length > 40) S.history = S.history.slice(-40);\n\n  } catch(e) {\n    removeTyping();\n    addBotMessage('❌ '+e.message);\n  } finally {\n    S.streaming = false;\n    document.getElementById('send-btn').disabled = false;\n  }\n}\n\n// ═══ Message rendering ════════════════════════════════════════════════════\nfunction scrollBot() {\n  const m = document.getElementById('messages');\n  m.scrollTop = m.scrollHeight;\n}\n\nfunction addUserMsg(text) {\n  const msgs = document.getElementById('messages');\n  const d = document.createElement('div');\n  d.className = 'msg user';\n  d.innerHTML = `<div class="av">👤</div><div class="bubble">${esc(text).replace(/\\n/g,'<br>')}</div>`;\n  msgs.appendChild(d);\n  scrollBot();\n}\n\nfunction addBotMessage(text) {\n  const msgs = document.getElementById('messages');\n  const d = document.createElement('div');\n  d.className = 'msg bot';\n  const id = 'bm'+Date.now();\n  d.innerHTML = `<div class="av">🤖</div><div class="bubble" id="${id}">${renderBot(text)}</div>`;\n  msgs.appendChild(d);\n  scrollBot();\n  renderCharts(id);\n}\n\nfunction addTyping() {\n  const msgs = document.getElementById('messages');\n  const d = document.createElement('div');\n  d.className = 'msg bot'; d.id = 'typing';\n  d.innerHTML = `<div class="av">🤖</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;\n  msgs.appendChild(d);\n  scrollBot();\n}\nfunction removeTyping() {\n  const t = document.getElementById('typing');\n  if (t) t.remove();\n}\n\nfunction startStream() {\n  const msgs = document.getElementById('messages');\n  const d = document.createElement('div');\n  d.className = 'msg bot';\n  const id = 'bs'+Date.now();\n  d.innerHTML = `<div class="av">🤖</div><div class="bubble" id="${id}"></div>`;\n  msgs.appendChild(d);\n  return id;\n}\n\nfunction updateStream(id, fullText) {\n  const el = document.getElementById(id);\n  if (!el) return;\n  const display = fullText.replace(/<chart>[\\s\\S]*?<\\/chart>/g,\n    '<em style="color:var(--accent);font-size:.82rem">[ 📊 Building chart… ]</em>');\n  el.innerHTML = md(display);\n  scrollBot();\n}\n\nfunction finalizeStream(id, fullText) {\n  const el = document.getElementById(id);\n  if (!el) return;\n  el.innerHTML = renderBot(fullText);\n  renderCharts(id);\n  scrollBot();\n}\n\n// ═══ Markdown ═════════════════════════════════════════════════════════════\nfunction esc(s) {\n  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\n}\n\nfunction md(text) {\n  return text\n    .replace(/\\*\\*(.+?)\\*\\*/g,'<strong>$1</strong>')\n    .replace(/\\*(.+?)\\*/g,'<em>$1</em>')\n    .replace(/`([^`]+)`/g,'<code>$1</code>')\n    .replace(/^#{1,4} (.+)$/gm,'<h4>$1</h4>')\n    .replace(/^[-•] (.+)$/gm,'<li>$1</li>')\n    .replace(/(<li>[\\s\\S]*?<\\/li>)+/g,s=>`<ul>${s}</ul>`)\n    .replace(/\\n\\n/g,'</p><p>')\n    .replace(/\\n/g,'<br>');\n}\n\nfunction renderBot(text) {\n  // Extract charts → placeholders\n  const processed = text.replace(/<chart>([\\s\\S]*?)<\\/chart>/g, (_, json) => {\n    const cid = `c${++S.chartId}`;\n    S.pendingCharts[cid] = json.trim();\n    return `<div class="chart-wrap" id="${cid}-wrap"><div class="chart-canvas-wrap"><canvas id="${cid}"></canvas></div></div>`;\n  });\n  return md(processed);\n}\n\nfunction renderCharts(containerId) {\n  const container = document.getElementById(containerId);\n  if (!container) return;\n\n  Object.entries(S.pendingCharts).forEach(([cid, jsonStr]) => {\n    const canvas = container.querySelector(`#${cid}`);\n    if (!canvas) return;\n\n    try {\n      const cfg = JSON.parse(jsonStr);\n      const wrap = canvas.closest('.chart-wrap');\n\n      // Title\n      if (wrap && cfg.title) {\n        const t = document.createElement('div');\n        t.className = 'chart-title';\n        t.textContent = cfg.title;\n        wrap.insertBefore(t, wrap.firstChild);\n      }\n\n      const isHoriz = cfg.indexAxis === 'y';\n      const isDough = cfg.type === 'doughnut' || cfg.type === 'pie';\n\n      // Default colors\n      const defColors = ['#6366f1','#10b981','#f59e0b','#ef4444','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f97316','#a855f7'];\n      if (cfg.datasets) {\n        cfg.datasets.forEach(ds => {\n          if (!ds.backgroundColor && !isDough) ds.backgroundColor = defColors;\n          if (isDough && !ds.backgroundColor) ds.backgroundColor = defColors;\n        });\n      }\n\n      new Chart(canvas, {\n        type: cfg.type === 'horizontalBar' ? 'bar' : (cfg.type || 'bar'),\n        data: { labels: cfg.labels || [], datasets: cfg.datasets || [] },\n        options: {\n          responsive: true,\n          maintainAspectRatio: false,\n          indexAxis: isHoriz ? 'y' : 'x',\n          plugins: {\n            legend: {\n              display: isDough,\n              labels: { color: '#8892b0', font: {size:11}, padding:16 },\n            },\n            tooltip: {\n              callbacks: {\n                label(ctx) {\n                  const v = ctx.parsed?.y ?? ctx.parsed?.x ?? ctx.raw ?? 0;\n                  if (typeof v === 'number') return ` ₹${v.toLocaleString('en-IN')}`;\n                  return ` ${v}`;\n                }\n              }\n            }\n          },\n          scales: isDough ? {} : {\n            x: {\n              ticks: {\n                color:'#8892b0', font:{size:10},\n                callback: isHoriz\n                  ? v => (typeof v==='number' ? (v>=100000?`₹${(v/100000).toFixed(1)}L`:`₹${(v/1000).toFixed(0)}k`) : v)\n                  : undefined\n              },\n              grid: { color:'#252b4a' },\n            },\n            y: {\n              ticks: {\n                color:'#8892b0', font:{size:10},\n                callback: !isHoriz\n                  ? v => (typeof v==='number' ? (v>=100000?`₹${(v/100000).toFixed(1)}L`:`₹${(v/1000).toFixed(0)}k`) : v)\n                  : undefined\n              },\n              grid: { color:'#252b4a' },\n            }\n          }\n        }\n      });\n\n      delete S.pendingCharts[cid];\n    } catch(e) {\n      console.error('Chart error:', e, jsonStr);\n      const wrap = canvas.closest('.chart-wrap');\n      if (wrap) wrap.innerHTML = `<div style="color:var(--red);font-size:.78rem;padding:8px">Chart error: ${e.message}</div>`;\n      delete S.pendingCharts[cid];\n    }\n  });\n}\n\n// ═══ API key persistence ══════════════════════════════════════════════════\nconst saved = localStorage.getItem('fc_key');\nif (saved) document.getElementById('api-key').value = saved;\ndocument.getElementById('api-key').addEventListener('change', function() {\n  if (this.value) localStorage.setItem('fc_key', this.value);\n});\n</script>\n</body>\n</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FinanceChat â AI Money Analyst</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<style>
+:root {
+  --bg:#0d0f1a; --sb:#12152a; --card:#1a1f38; --border:#252b4a;
+  --accent:#6366f1; --green:#10b981; --yellow:#f59e0b; --red:#ef4444;
+  --text:#e2e8f0; --muted:#8892b0;
+  --radius:12px; --shadow:0 4px 24px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex}
+
+/* âââ SIDEBAR âââââââââââââââââââââââââââââââââââââââââââââââââââ */
+#sidebar{
+  width:300px;min-width:260px;background:var(--sb);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:18px 14px;gap:14px;
+  overflow-y:auto;overflow-x:hidden;
+}
+#sidebar::-webkit-scrollbar{width:4px}
+#sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+.logo{font-size:1.25rem;font-weight:800;color:var(--accent);display:flex;align-items:center;gap:8px}
+.logo span{font-size:1.4rem}
+.sect-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:3px}
+
+/* API key */
+.api-row input{
+  width:100%;background:var(--card);border:1px solid var(--border);
+  color:var(--text);border-radius:8px;padding:8px 12px;font-size:.82rem;outline:none;
+}
+.api-row input:focus{border-color:var(--accent)}
+
+/* Drop zone */
+#drop-zone{
+  background:var(--card);border:2px dashed var(--border);border-radius:var(--radius);
+  padding:18px;text-align:center;cursor:pointer;transition:all .2s;
+}
+#drop-zone:hover,#drop-zone.drag-over{border-color:var(--accent);background:#1e2244}
+#drop-zone .dz-icon{font-size:1.8rem;margin-bottom:6px}
+#drop-zone p{font-size:.8rem;color:var(--muted)}
+#drop-zone strong{color:var(--accent)}
+#file-input{display:none}
+#selected-files{font-size:.73rem;color:var(--muted);margin-top:5px;display:none;word-break:break-all}
+#upload-btn{
+  width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;
+  padding:9px;font-size:.85rem;font-weight:600;cursor:pointer;transition:opacity .2s;
+}
+#upload-btn:disabled{opacity:.4;cursor:not-allowed}
+#upload-btn:not(:disabled):hover{opacity:.85}
+#uploading-bar{
+  display:none;align-items:center;gap:8px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:8px;padding:9px 12px;font-size:.8rem;color:var(--muted);
+}
+#uploading-bar.show{display:flex}
+.spin{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Account cards */
+.ac-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:5px;
+}
+.ac-bank{font-size:.85rem;font-weight:700;color:var(--accent)}
+.ac-type{font-size:.73rem;color:var(--muted)}
+.ac-balance{font-size:1.1rem;font-weight:700;color:var(--green)}
+.ac-period{font-size:.7rem;color:var(--muted)}
+.ac-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:3px}
+.ac-stat{background:#0d0f1a;border-radius:6px;padding:5px 8px}
+.ac-stat .lbl{font-size:.62rem;color:var(--muted);text-transform:uppercase}
+.ac-stat .val{font-weight:700;font-size:.8rem}
+.ac-stat.g .val{color:var(--green)}
+.ac-stat.r .val{color:var(--red)}
+
+#reset-btn{
+  width:100%;background:transparent;border:1px solid #ef444450;color:var(--red);
+  border-radius:8px;padding:7px;font-size:.78rem;cursor:pointer;transition:all .2s;margin-top:auto;
+}
+#reset-btn:hover{background:#ef444415}
+
+/* âââ MAIN âââââââââââââââââââââââââââââââââââââââââââââââââââââââ */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+#chat-header{
+  padding:14px 22px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.header-title{font-size:.95rem;font-weight:700}
+.header-sub{font-size:.75rem;color:var(--muted);margin-top:1px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block;margin-right:6px;transition:background .3s}
+.dot.live{background:var(--green)}
+
+#messages{flex:1;overflow-y:auto;padding:20px 22px;display:flex;flex-direction:column;gap:18px;scroll-behavior:smooth}
+#messages::-webkit-scrollbar{width:5px}
+#messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* Welcome */
+#welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;text-align:center;padding:40px}
+#welcome .wicon{font-size:3rem}
+#welcome h3{font-size:1.3rem;font-weight:800}
+#welcome p{color:var(--muted);font-size:.88rem;max-width:380px;line-height:1.65}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:6px}
+.chip{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:7px 15px;font-size:.78rem;cursor:pointer;transition:all .2s;color:var(--text)}
+.chip:hover{border-color:var(--accent);color:var(--accent);background:#1e2244}
+
+/* Messages */
+.msg{display:flex;gap:9px;max-width:840px;width:100%}
+.msg.user{align-self:flex-end;flex-direction:row-reverse}
+.msg.bot{align-self:flex-start}
+.av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0;margin-top:2px}
+.user .av{background:var(--accent)}
+.bot .av{background:var(--card);border:1px solid var(--border)}
+.bubble{padding:11px 15px;border-radius:15px;font-size:.88rem;line-height:1.7;max-width:calc(100% - 42px)}
+.user .bubble{background:var(--accent);border-bottom-right-radius:3px}
+.bot .bubble{background:var(--card);border:1px solid var(--border);border-bottom-left-radius:3px}
+.bubble strong{color:var(--green)}
+.bubble h3,.bubble h4{color:var(--accent);margin:10px 0 4px}
+.bubble ul,.bubble ol{padding-left:18px}
+.bubble li{margin:3px 0}
+.bubble code{background:#0d0f1a;padding:2px 5px;border-radius:4px;font-family:monospace;font-size:.82em}
+.bubble table{border-collapse:collapse;width:100%;margin:8px o;font-size:.82rem}
+.bubble th{background:#0d0f1a;padding:6px 10px;text-align:left;color:var(--accent);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em}
+.bubble td{padding:6px 10px;border-bottom:1px solid var(--border)}
+
+/* Chart */
+.chart-wrap{background:#0d0f1a;border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-top:10px}
+.chart-title{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em}
+.chart-canvas-wrap{position:relative;height:240px}
+
+/* Typing */
+.typing{display:flex;gap:4px;align-items:center;padding:6px 2px}
+.typing span{width:6px;height:6px;background:var(--accent);border-radius:50%;animation:bounce .9s infinite}
+.typing span:nth-child(2){animation-delay:.15s}
+.typing span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+
+/* Input */
+#input-area{padding:14px 22px;border-top:1px solid var(--border);background:var(--sb);flex-shrink:0}
+.sug-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.sch{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:5px 11px;font-size:.75rem;cursor:pointer;color:var(--muted);transition:all .15s;white-space:nowrap}
+.sch:hover{border-color:var(--accent);color:var(--accent)}
+.input-row{display:flex;gap:9px;align-items:flex-end;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:9px 12px;transition:border-color .2s}
+.input-row:focus-within{border-color:var(--accent)}
+#msg-input{flex:1;background:transparent;border:none;color:var(--text);font-size:.88rem;resize:none;outline:none;max-height:110px;line-height:1.5;font-family:inherit}
+#send-btn{background:var(--accent);border:none;border-radius:9px;width:34px;height:34px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.95rem;transition:opacity .2s;flex-shrink:0}
+#send-btn:disabled{opacity:.35;cursor:not-allowed}
+#send-btn:not(:disabled):hover{opacity:.82}
+
+/* Toast */
+#toast{position:fixed;bottom:22px;right:22px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:.82rem;z-index:999;display:none;align-items:center;gap:8px;box-shadow:var(--shadow);max-width:320px}
+#toast.show{display:flex}
+#toast.ok{border-color:var(--green)}
+#toast.err{border-color:var(--red)}
+</style>
+</head>
+<body>
+
+<!-- âââ SIDEBAR âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+<aside id="sidebar">
+  <div class="logo"><span>ð¹</span> FinanceChat</div>
+
+  <div>
+    <div class="sect-label">Anthropic API Key</div>
+    <div class="api-row">
+      <input type="password" id="api-key" placeholder="sk-ant-api03-â¦" autocomplete="off"/>
+    </div>
+  </div>
+
+  <div>
+    <div class="sect-label">Upload Bank Statements</div>
+    <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="dz-icon">ð</div>
+      <p>Drop PDFs here or <strong>click to browse</strong></p>
+      <p style="margin-top:3px;font-size:.72rem">Passwords auto-read from filename (e.g. HDFC (123456).pdf)</p>
+      <input type="file" id="file-input" multiple accept=".pdf"/>
+    </div>
+    <div id="selected-files"></div>
+    <button id="upload-btn" disabled style="margin-top:8px">â¬ Upload &amp; Analyse</button>
+    <div id="uploading-bar"><div class="spin"></div><span id="upload-status">Uploadingâ¦</span></div>
+  </div>
+
+  <div id="accounts-wrap" style="display:none">
+    <div class="sect-label">Loaded Accounts</div>
+    <div id="account-cards" style="display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+
+  <button id="reset-btn" style="display:none">ð Reset &amp; Upload New</button>
+</aside>
+
+<!-- âââ MAIN ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
+<main id="main">
+  <div id="chat-header">
+    <div>
+      <div class="header-title"><span class="dot" id="dot"></span>FinanceChat</div>
+      <div class="header-sub" id="header-sub">Upload your statements to get started</div>
+    </div>
+    <div style="font-size:.75rem;color:var(--muted)" id="period-badge"></div>
+  </div>
+
+  <div id="messages">
+    <div id="welcome">
+      <div class="wicon">ð¦</div>
+      <h3>Your AI Money Analyst</h3>
+      <p>Upload any month's bank statement PDFs â I'll parse every transaction and answer your questions with charts and insights.</p>
+      <div class="chips">
+        <div class="chip" onclick="prefill(this)">ð Full overview with charts</div>
+        <div class="chip" onclick="prefill(this)">ð¸ Where did my money go?</div>
+        <div class="chip" onclick="prefill(this)">ð« Is my academy profitable?</div>
+        <div class="chip" onclick="prefill(this)">ð° Can I safely take out â¹5L?</div>
+        <div class="chip" onclick="prefill(this)">ð Income vs spending breakdown</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="input-area">
+    <div class="sug-chips" id="sug-chips" style="display:none">
+      <div class="sch" onclick="sendChip('Give me a full money overview with charts')">ð Overview</div>
+      <div class="sch" onclick="sendChip('What are my top 5 biggest expenses?')">ð¸ Top expenses</div>
+      <div class="sch" onclick="sendChip('Show income vs spending as a chart')">ð Income vs spend</div>
+      <div class="sch" onclick="sendChip('Break down spending by category as a doughnut chart')">ð© Categories</div>
+      <div class="sch" onclick="sendChip('How much did I spend on salaries and rent?')">ð¥ Payroll & rent</div>
+      <div class="sch" onclick="sendChip('What is my net worth change this month?')">ð¼ Net worth</div>
+    </div>
+    <div class="input-row">
+      <textarea id="msg-input" rows="1" placeholder="Ask anything about your financesâ¦" disabled></textarea>
+      <button id="send-btn" disabled title="Send">â¤</button>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+// âââ Client State (stateless backend â we own everything) âââââââââââââââââ
+const S = {
+  accounts: [],       // Parsed account data from server (sent with every chat)
+  history: [],        // [{role, content}] conversation history
+  streaming: false,
+  chartId: 0,
+  pendingCharts: {},
+};
+
+// âââ Toast ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+function toast(msg, type='ok') {
+  const el = document.getElementById('toast');
+  el.textContent = (type==='ok'?'â ':'â ') + msg;
+  el.className = `show ${type}`;
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>el.className='', 3500);
+}
+
+// âââ Format âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+function fmt(n) {
+  if (!n && n!==0) return 'â¹0';
+  const abs = Math.abs(n);
+  if (abs>=10000000) return `â¹${(n/10000000).toFixed(1)}Cr`;
+  if (abs>=100000) return `â¹${(n/100000).toFixed(1)}L`;
+  if (abs>=1000) return `â¹${(n/1000).toFixed(1)}k`;
+  return `â¹${n.toFixed(0)}`;
+}
+
+// âââ Drop zone ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+const dz = document.getElementById('drop-zone');
+const fi = document.getElementById('file-input');
+
+dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('drag-over')});
+dz.addEventListener('dragleave', ()=>dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e=>{
+  e.preventDefault(); dz.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) { fi.files=e.dataTransfer.files; onFileSelect(); }
+});
+fi.addEventListener('change', onFileSelect);
+
+function onFileSelect() {
+  const files = fi.files;
+  if (!files.length) return;
+  const sfEl = document.getElementById('selected-files');
+  sfEl.textContent = Array.from(files).map(f=>f.name).join(', ');
+  sfEl.style.display = 'block';
+  document.getElementById('upload-btn').disabled = false;
+}
+
+// âââ Upload âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+document.getElementById('upload-btn').addEventListener('click', doUpload);
+
+function detectPDFPassword(filename) {
+  const m = filename.match(/\((\d+)\)/);
+  return m ? m[1] : null;
+}
+
+apync function extractTextFromPDF(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const password = detectPDFPassword(file.name);
+  const loadOpts = { data: arrayBuffer };
+  if (password) loadOpts.password = password;
+  const pdf = await pdfjsLib.getDocument(loadOpts).promise;
+  let fullText = '';
+
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+
+    // Sort items by y (topâbottom) then x (leftâright) â essential for tables
+    const items = content.items.filter(i => i.str && i.str.trim());
+    items.sort((a, b) => {
+      const yDiff = Math.round(b.transform[5]) - Math.round(a.transform[5]);
+      if (Math.abs(yDiff) > 3) return yDiff;
+      return a.transform[4] - b.transform[4];
+    });
+
+    // Group into lines by y proximity, add tab between columns
+    let lastY = null, lastX = null, line = [];
+    for (const item of items) {
+      const y = Math.round(item.transform[5]);
+      const x = item.transform[4];
+      if (lastY !== null && Math.abs(y - lastY) > 3) {
+        fullText += line.join('\t') + '\n';
+        line = [];
+        lastX = null;
+      }
+      // Add extra space for large horizontal gaps (column separators)
+      if (lastX !== null && (x - lastX) > 20) line.push('');
+      line.push(item.str.trim());
+      lastY = y;
+      lastX = x + (item.width || 0);
+    }
+    if (line.length) fullText += line.join('\t') + '\n';
+    fullText += '\n--- page break ---\n';
+  }
+  return fullText;
+}
+
+async function doUpload() {
+  const apiKey = document.getElementById('api-key').value.trim();
+  if (!apiKey) { toast('Enter your Anthropic API key first', 'err'); return; }
+  const files = fi.files;
+  if (!files.length) { toast('Select PDF files first', 'err'); return; }
+
+  const btn = document.getElementById('upload-btn');
+  const bar = document.getElementById('uploading-bar');
+  const status = document.getElementById('upload-status');
+  btn.disabled = true;
+  bar.classList.add('show');
+
+  try {
+    // Extract text client-side â avoids Vercel's 4.5MB body limit
+    const extractedFiles = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      status.textContent = `Reading ${f.name} (${i+1}/${files.length})â¦`;
+      try {
+        const text = await extractTextFromPDF(f);
+        extractedFiles.push({ filename: f.name, text });
+      } catch(e) {
+        extractedFiles.push({ filename: f.name, error: `PDF read failed: ${e.message}` });
+      }
+    }
+
+    status.textContent = 'Parsing with Claude Haikuâ¦';
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey, files: extractedFiles })
+    });
+    const data = await res.json();
+    bar.classList.remove('show');
+
+    if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+    const good = data.accounts.filter(a=>!a.error);
+    const bad  = data.accounts.filter(a=> a.error);
+
+    bad.forEach(b=>toast(`${b.filename}: ${b.error}`, 'err'));
+
+    if (good.length) {
+      S.accounts = good;
+      S.history = [];
+      renderSidebar(good);
+      enableChat();
+      toast(`${good.length} account(s) ready!`);
+      const doc = document.getElementById('welcome');
+      if (doc) doc.remove();
+      addBotMessage(welcomeSummary(good));
+    }
+  } catch(e) {
+    bar.classList.remove('show');
+    btn.disabled = false;
+    toast(e.message, 'err');
+  }
+}
+
+function welcomeSummary(accounts) {
+  const closing = accounts.reduce((s,a)=>s+(a.closing_balance||0), 0);
+  const credits = accounts.reduce((s,a)=>s+(a.total_credits||0), 0);
+  const debits  = accounts.reduce((s,a)=>s+(a.total_debits||0), 0);
+  const period  = accounts[0]?.period || '';
+  return `â **${accounts.length} account(s) loaded** â ${period}\n\n` +
+    `**Snapshot:**\n- ð° Total closing balance: **${fmt(closing)}**\n` +
+    `- ð¥ Total in: **${fmt(credits)}**\n- ð¤ Total out: **${fmt(debits)}**\n\n` +
+    `Ask me anything, or try **"Full overview with charts"** to see the complete picture!`;
+}
+
+function renderSidebar(accounts) {
+  const container = document.getElementById('account-cards');
+  container.innerHTML = '';
+  accounts.forEach(a=>{
+    const card = document.createElement('div');
+    card.className = 'ac-card';
+    card.innerHTML = `
+      <div class="ac-bank">${a.bank||'Unknown Bank'}</div>
+      <div class="ac-type">${a.account_type||''} Â·Â·Â·${String(a.account_number||'').slice(-4)}</div>
+      <div class="ac-balance">${fmt(a.closing_balance)}</div>
+      <div class="ac-period">${a.period||''} Â· ${(a.transactions||[]).length} txns</div>
+      <div class="ac-grid">
+        <div class="ac-stat g"><div class="lbl">In</div><div class="val">${fmt(a.total_credits)}</div></div>
+        <div class="ac-stat r"><div class="lbl">Out</div><div class="val">${fmt(a.total_debits)}</div></div>
+      </div>`;
+    container.appendChild(card);
+  });
+  document.getElementById('accounts-wrap').style.display = 'block';
+  document.getElementById('reset-btn').style.display = 'block';
+
+  // Period badge
+  const p = accounts[0]?.period;
+  if (p) document.getElementById('period-badge').textContent = p;
+}
+
+function enableChat() {
+  document.getElementById('msg-input').disabled = false;
+  document.getElementById('send-btn').disabled = false;
+  document.getElementById('sug-chips').style.display = 'flex';
+  document.getElementById('dot').classList.add('live');
+  document.getElementById('header-sub').textContent = 'Statements loaded â ask me anything';
+}
+
+// âââ Reset ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+document.getElementById('reset-btn').addEventListener('click', async ()=>{
+  await fetch('/api/reset', {method:'POST'}).catch(()=>{});
+  S.accounts = [];
+  S.history = [];
+  document.getElementById('account-cards').innerHTML = '';
+  document.getElementById('accounts-wrap').style.display = 'none';
+  document.getElementById('reset-btn').style.display = 'none';
+  document.getElementById('msg-input').disabled = true;
+  document.getElementById('send-btn').disabled = true;
+  document.getElementById('sug-chips').style.display = 'none';
+  document.getElementById('dot').classList.remove('live');
+  document.getElementById('header-sub').textContent = 'Upload your statements to get started';
+  document.getElementById('period-badge').textContent = '';
+  document.getElementById('messages').innerHTML = '';
+  fi.value = '';
+  document.getElementById('selected-files').style.display = 'none';
+  document.getElementById('upload-btn').disabled = true;
+  toast('Reset! Upload new statements.');
+});
+
+// âââ Chat ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+document.getElementById('msg-input').addEventListener('keydown', e=>{
+  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+document.getElementById('msg-input').addEventListener('input', function(){
+  this.style.height='auto';
+  this.style.height=Math.min(this.scrollHeight,110)+'px';
+});
+document.getElementById('send-btn').addEventListener('click', send);
+
+function prefill(el) {
+  document.getElementById('msg-input').value = el.textContent.replace(/^[^\wâ¹]*/,'').trim();
+}
+function sendChip(text) {
+  document.getElementById('msg-input').value = text;
+  send();
+}
+
+async function send() {
+  if (S.streaming) return;
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const apiKey = document.getElementById('api-key').value.trim();
+  if (!apiKey) { toast('Enter your API key', 'err'); return; }
+
+  input.value = '';
+  input.style.height = 'auto';
+  S.streaming = true;
+  document.getElementById('send-btn').disabled = true;
+
+  addUserMsg(text);
+  addTyping();
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        message: text,
+        api_key: apiKey,
+        accounts: S.accounts,    // Full parsed data sent every time
+        history: S.history,       // Full conversation history
+      }),
+    });
+
+    const data = await res.json().catch(()=>({error:'Request failed'}));
+    if (!res.ok || data.error) throw new Error(data.error || 'Chat failed');
+
+    removeTyping();
+    const full = data.response || '';
+    addBotMessage(full);
+
+    // Save to history (trim to last 20 exchanges to avoid huge payloads)
+    S.history.push({role:'user', content:text});
+    S.history.push({role:'assistant', content:full});
+    if (S.history.length > 40) S.history = S.history.slice(-40);
+
+  } catch(e) {
+    removeTyping();
+    addBotMessage('â '+e.message);
+  } finally {
+    S.streaming = false;
+    document.getElementById('send-btn').disabled = false;
+  }
+}
+
+// âââ Message rendering ââââââââââââââââââââââââââââââââââââââââââââââââââââ
+function scrollBot() {
+  const m = document.getElementById('messages');
+  m.scrollTop = m.scrollHeight;
+}
+
+function addUserMsg(text) {
+  const msgs = document.getElementById('messages');
+  const d = document.createElement('div');
+  d.className = 'msg user';
+  d.innerHTML = `<div class="av">ð¤</div><div class="bubble">${esc(text).replace(/\n/g,'<br>')}</div>`;
+  msgs.appendChild(d);
+  scrollBot();
+}
+
+function addBotMessage(text) {
+  const msgs = document.getElementById('messages');
+  const d = document.createElement('div');
+  d.className = 'msg bot';
+  const id = 'bm'+Date.now();
+  d.innerHTML = `<div class="av">ð¤</div><div class="bubble" id="${id}">${renderBot(text)}</div>`;
+  msgs.appendChild(d);
+  scrollBot();
+  renderCharts(id);
+}
+
+function addTyping() {
+  const msgs = document.getElementById('messages');
+  const d = document.createElement('div');
+  d.className = 'msg bot'; d.id = 'typing';
+  d.innerHTML = `<div class="av">ð¤</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  msgs.appendChild(d);
+  scrollBot();
+}
+function removeTyping() {
+  const t = document.getElementById('typing');
+  if (t) t.remove();
+}
+
+function startStream() {
+  const msgs = document.getElementById('messages');
+  const d = document.createElement('div');
+  d.className = 'msg bot';
+  const id = 'bs'+Date.now();
+  d.innerHTML = `<div class="av">ð¤</div><div class="bubble" id="${id}"></div>`;
+  msgs.appendChild(d);
+  return id;
+}
+
+function updateStream(id, fullText) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const display = fullText.replace(/<chart>[\s\S]*?<\/chart>/g,
+    '<em style="color:var(--accent);font-size:.82rem">[ ð Building chartâ¦ ]</em>');
+  el.innerHTML = md(display);
+  scrollBot();
+}
+
+function finalizeStream(id, fullText) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = renderBot(fullText);
+  renderCharts(id);
+  scrollBot();
+}
+
+// âââ Markdown âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function md(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/^#{1,4} (.+)$/gm,'<h4>$1</h4>')
+    .replace(/^[-â¢] (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)+/g,s=>`<ul>${s}</ul>`)
+    .replace(/\n\n/g,'</p><p>')
+    .replace(/\n/g,'<br>');
+}
+
+function renderBot(text) {
+  // Extract charts â placeholders
+  const processed = text.replace(/<chart>([\s\S]*?)<\/chart>/g, (_, json) => {
+    const cid = `c${++S.chartId}`;
+    S.pendingCharts[cid] = json.trim();
+    return `<div class="chart-wrap" id="${cid}-wrap"><div class="chart-canvas-wrap"><canvas id="${cid}"></canvas></div></div>`;
+  });
+  return md(processed);
+}
+
+function renderCharts(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  Object.entries(S.pendingCharts).forEach(([cid, jsonStr]) => {
+    const canvas = container.querySelector(`#${cid}`);
+    if (!canvas) return;
+
+    try {
+      const cfg = JSON.parse(jsonStr);
+      const wrap = canvas.closest('.chart-wrap');
+
+      // Title
+      if (wrap && cfg.title) {
+        const t = document.createElement('div');
+        t.className = 'chart-title';
+        t.textContent = cfg.title;
+        wrap.insertBefore(t, wrap.firstChild);
+      }
+
+      const isHoriz = cfg.indexAxis === 'y';
+      const isDough = cfg.type === 'doughnut' || cfg.type === 'pie';
+
+      // Default colors
+      const defColors = ['#6366f1','#10b981','#f59e0b','#ef4444','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#f97316','#a855f7'];
+      if (cfg.datasets) {
+        cfg.datasets.forEach(ds => {
+          if (!ds.backgroundColor && !isDough) ds.backgroundColor = defColors;
+          if (isDough && !ds.backgroundColor) ds.backgroundColor = defColors;
+        });
+      }
+
+      new Chart(canvas, {
+        type: cfg.type === 'horizontalBar' ? 'bar' : (cfg.type || 'bar'),
+        data: { labels: cfg.labels || [], datasets: cfg.datasets || [] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: isHoriz ? 'y' : 'x',
+          plugins: {
+            legend: {
+              display: isDough,
+              labels: { color: '#8892b0', font: {size:11}, padding:16 },
+            },
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  const v = ctx.parsed?.y ?? ctx.parsed?.x ?? ctx.raw ?? 0;
+                  if (typeof v === 'number') return ` â¹${v.toLocaleString('en-IN')}`;
+                  return ` ${v}`;
+                }
+              }
+            }
+          },
+          scales: isDough ? {} : {
+            x: {
+              ticks: {
+                color:'#8892b0', font:{size:10},
+                callback: isHoriz
+                  ? v => (typeof v==='number' ? (v>=100000?`â¹${(v/100000).toFixed(1)}L`:`â¹${(v/1000).toFixed(0)}k`) : v)
+                  : undefined
+              },
+              grid: { color:'#252b4a' },
+            },
+            y: {
+              ticks: {
+                color:'#8892b0', font:{size:10},
+                callback: !isHoriz
+                  ? v => (typeof v==='number' ? (v>=100000?`â¹${(v/100000).toFixed(1)}L`:`â¹${(v/1000).toFixed(0)}k`) : v)
+                  : undefined
+              },
+              grid: { color:'#252b4a' },
+            }
+          }
+        }
+      });
+
+      delete S.pendingCharts[cid];
+    } catch(e) {
+      console.error('Chart error:', e, jsonStr);
+      const wrap = canvas.closest('.chart-wrap');
+      if (wrap) wrap.innerHTML = `<div style="color:var(--red);font-size:.78rem;padding:8px">Chart error: ${e.message}</div>`;
+      delete S.pendingCharts[cid];
+    }
+  });
+}
+
+// âââ API key persistence ââââââââââââââââââââââââââââââââââââââââââââââââââ
+const saved = localStorage.getItem('fc_key');
+if (saved) document.getElementById('api-key').value = saved;
+document.getElementById('api-key').addEventListener('change', function() {
+  if (this.value) localStorage.setItem('fc_key', this.value);
+});
+</script>
+</body>
+</html>
