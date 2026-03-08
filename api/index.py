@@ -1,12 +1,12 @@
 """
-FinanceChat â Stateless Flask backend for Vercel + local dev.
+FinanceChat — Stateless Flask backend for Vercel + local dev.
 All state lives client-side. Every request carries its own context.
-PDFs are parsed client-side (PDF.js) â only text is sent here.
+PDFs are parsed client-side (PDF.js) — only text is sent here.
 """
 import os
 import re
 import json
-from flask import Flask, request, jsonify, Response, stream_with_context, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import anthropic
 
@@ -23,7 +23,7 @@ def parse_with_claude(raw_text: str, api_key: str, filename: str) -> dict:
 
     prompt = f"""You are a financial data parser specialising in Indian bank statements (HDFC, IndusInd, SBI, ICICI, Axis, Federal, etc.).
 
-Parse this bank statement and return ONLY valid JSON â no markdown, no explanation.
+Parse this bank statement and return ONLY valid JSON — no markdown, no explanation.
 
 Return this exact structure:
 {{
@@ -58,13 +58,13 @@ Statement:
         messages=[{"role": "user", "content": prompt}]
     )
     text = msg.content[0].text.strip()
-    text = re.sub(r'^```(?:json)?\s*', '', text)
-    text = re.sub(r'\s*```$', '', text)
+    text = re.sub(r'^```(?:json)?\\s*', '', text)
+    text = re.sub(r'\\s*```$', '', text)
 
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        m = re.search(r'\{.*\}', text, re.DOTALL)
+        m = re.search(r'\\{.*\\}', text, re.DOTALL)
         if m:
             return json.loads(m.group())
         raise
@@ -75,18 +75,18 @@ def build_system_prompt(accounts: list) -> str:
     if not accounts:
         return "No bank statements have been uploaded."
 
-    lines = ["You are FinanceGPT â a sharp, warm financial analyst who specialises in Indian personal and business finances.\n"]
-    lines.append("## Bank Statement Data\n")
+    lines = ["You are FinanceGPT — a sharp, warm financial analyst who specialises in Indian personal and business finances.\\n"]
+    lines.append("## Bank Statement Data\\n")
 
     for acc in accounts:
-        lines.append(f"### {acc.get('bank','Unknown')} â {acc.get('account_type','')} (Â·Â·Â·{str(acc.get('account_number',''))[-4:]})")
+        lines.append(f"### {acc.get('bank','Unknown')} — {acc.get('account_type','')} (···{str(acc.get('account_number',''))[-4:]})")
         lines.append(f"Period: {acc.get('period','')}")
-        lines.append(f"Opening: â¹{acc.get('opening_balance',0):,.2f} | Closing: â¹{acc.get('closing_balance',0):,.2f}")
-        lines.append(f"Credits: â¹{acc.get('total_credits',0):,.2f} | Debits: â¹{acc.get('total_debits',0):,.2f}")
+        lines.append(f"Opening: ₹{acc.get('opening_balance',0):,.2f} | Closing: ₹{acc.get('closing_balance',0):,.2f}")
+        lines.append(f"Credits: ₹{acc.get('total_credits',0):,.2f} | Debits: ₹{acc.get('total_debits',0):,.2f}")
         txns = acc.get('transactions', [])
         lines.append(f"Transactions ({len(txns)}):")
         for t in txns[:100]:
-            direction = f"+â¹{t.get('credit',0):,.0f}" if t.get('credit',0) > 0 else f"-â¹{t.get('debit',0):,.0f}"
+            direction = f"+₹{t.get('credit',0):,.0f}" if t.get('credit',0) > 0 else f"-₹{t.get('debit',0):,.0f}"
             lines.append(f"  [{t.get('date','')}] {direction} | {str(t.get('description',''))[:60]} | [{t.get('category','Other')}]")
 
     lines.append("""
@@ -96,7 +96,7 @@ CAPABILITIES:
 1. Answer questions about spending, income, savings, patterns
 2. Identify top expenses, categories, trends
 3. Generate charts using this EXACT format in your response:
-   <chart>{"type":"bar","title":"...","labels":[...],"datasets":[{"label":"â¹ Amount","data":[...],"backgroundColor":["#6366f1","#10b981","#f59e0b","#ef4444","#3b82f6","#8b5cf6","#ec4899"]}]}</chart>
+   <chart>{"type":"bar","title":"...","labels":[...],"datasets":[{"label":"₹ Amount","data":[...],"backgroundColor":["#6366f1","#10b981","#f59e0b","#ef4444","#3b82f6","#8b5cf6","#ec4899"]}]}</chart>
 
 CHART TYPES:
 - Bar chart: {"type":"bar","title":"...","labels":[...],"datasets":[{"label":"...","data":[...],"backgroundColor":[...]}]}
@@ -105,18 +105,18 @@ CHART TYPES:
 - Line chart: {"type":"line","title":"...","labels":[...],"datasets":[{"label":"...","data":[...],"borderColor":"#6366f1","tension":0.4}]}
 
 RULES:
-- Always use â¹ and Indian format. Use L for lakhs (â¹1,50,000 = â¹1.5L)
+- Always use ₹ and Indian format. Use L for lakhs (₹1,50,000 = ₹1.5L)
 - Give a crisp 2-3 line answer then show charts
-- For "overview" or "summary" requests â generate 3+ charts
+- For "overview" or "summary" requests — generate 3+ charts
 - If asked for visuals, ALWAYS include at least one chart
 - Surya and Uday = employees; Sujana = academy rent; P2P transfers = crypto
 - The user runs SkillStack Academy (edtech) and an Escape Room Cafe in Visakhapatnam
-- Be like a smart CFO who's also a friend â direct, warm, no fluff""")
+- Be like a smart CFO who's also a friend — direct, warm, no fluff""")
 
-    return "\n".join(lines)
+    return "\\n".join(lines)
 
 
-# ââ Routes ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# ── Routes ───────────────────────────────────────────────────────────────────
 
 @app.route('/')
 def index():
@@ -160,12 +160,12 @@ def upload():
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    """Stateless streaming chat â client sends full context with each request."""
+    """Stateless chat — client sends full context with each request, returns JSON."""
     data = request.get_json(force=True)
     user_message = data.get('message', '').strip()
     api_key = data.get('api_key', '').strip()
-    accounts = data.get('accounts', [])   # Full account data from client
-    history = data.get('history', [])     # Conversation history from client
+    accounts = data.get('accounts', [])
+    history = data.get('history', [])
 
     if not api_key:
         return jsonify({'error': 'API key required'}), 400
@@ -174,47 +174,31 @@ def chat():
     if not accounts:
         return jsonify({'error': 'No bank statement data. Please upload statements first.'}), 400
 
-    # Build messages list: history + new user message
     messages = list(history) + [{'role': 'user', 'content': user_message}]
 
-    def generate():
+    try:
         client = anthropic.Anthropic(api_key=api_key)
-        try:
-            with client.messages.stream(
-                model='claude-sonnet-4-5-20250929',
-                max_tokens=2048,
-                system=build_system_prompt(accounts),
-                messages=messages,
-            ) as stream:
-                for text in stream.text_stream:
-                    yield f"data: {json.dumps({'type': 'text', 'content': text})}\n\n"
-
-            yield f"data: {json.dumps({'type': 'done'})}\n\n"
-
-        except anthropic.AuthenticationError:
-            yield f"data: {json.dumps({'type': 'error', 'content': 'Invalid API key.'})}\n\n"
-        except anthropic.RateLimitError:
-            yield f"data: {json.dumps({'type': 'error', 'content': 'Rate limit hit. Try again in a moment.'})}\n\n"
-        except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
-
-    return Response(
-        stream_with_context(generate()),
-        mimetype='text/event-stream',
-        headers={
-            'Cache-Control': 'no-cache',
-            'X-Accel-Buffering': 'no',
-            'Transfer-Encoding': 'chunked',
-        }
-    )
+        msg = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=2048,
+            system=build_system_prompt(accounts),
+            messages=messages,
+        )
+        return jsonify({'response': msg.content[0].text})
+    except anthropic.AuthenticationError:
+        return jsonify({'error': 'Invalid API key.'}), 401
+    except anthropic.RateLimitError:
+        return jsonify({'error': 'Rate limit hit. Try again in a moment.'}), 429
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/reset', methods=['POST'])
 def reset():
-    # Stateless â nothing to clear server-side
+    # Stateless — nothing to clear server-side
     return jsonify({'status': 'ok'})
 
 
 if __name__ == '__main__':
-    print('ð FinanceChat running on http://localhost:5050')
+    print('🚀 FinanceChat running on http://localhost:5050')
     app.run(debug=False, port=5050, host='0.0.0.0', threaded=True)
