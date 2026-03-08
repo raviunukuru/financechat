@@ -127,7 +127,7 @@ body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--bg);co
 .bubble ul,.bubble ol{padding-left:18px}
 .bubble li{margin:3px 0}
 .bubble code{background:#0d0f1a;padding:2px 5px;border-radius:4px;font-family:monospace;font-size:.82em}
-.bubble table{border-collapse:collapse;width:100%;margin:8px o;font-size:.82rem}
+.bubble table{border-collapse:collapse;width:100%;margin:8px 0;font-size:.82rem}
 .bubble th{background:#0d0f1a;padding:6px 10px;text-align:left;color:var(--accent);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em}
 .bubble td{padding:6px 10px;border-bottom:1px solid var(--border)}
 
@@ -297,7 +297,7 @@ function detectPDFPassword(filename) {
   return m ? m[1] : null;
 }
 
-apync function extractTextFromPDF(file) {
+async function extractTextFromPDF(file) {
   const arrayBuffer = await file.arrayBuffer();
   const password = detectPDFPassword(file.name);
   const loadOpts = { data: arrayBuffer };
@@ -691,7 +691,7 @@ function renderCharts(containerId) {
               ticks: {
                 color:'#8892b0', font:{size:10},
                 callback: !isHoriz
-                  ? v => (typeof v==='number' ? (v>=100000?`â¹${(v/100000).toFixed(1)}L`:`â¹${(v/1000).toFixed(0)}k`) : v)
+                  ? v => (typeof v==='number' ? (v>=100000?`b¹${(v/100000).toFixed(1)}L`:`â¹${(v/1000).toFixed(0)}k`) : v)
                   : undefined
               },
               grid: { color:'#252b4a' },
